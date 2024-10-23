@@ -1,6 +1,7 @@
 import math
 import pygame
 import random
+import concurrent.futures
 
 # Constants
 SCREEN_WIDTH = 800
@@ -73,13 +74,24 @@ class Ball:
         self.dy: float = dy
     
     def update(self):
+        """
+        Updates the position of the ball based on its velocity and acceleration.
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        None
+        """
+        global gravity_on, air_resistance_on
+
         # Apply gravity
-        global gravity_on
         if gravity_on:
             self.dy += GRAVITY
 
         # Apply air resistance
-        global air_resistance_on
         if air_resistance_on:
             self.dx *= AIR_RESISTANCE
             self.dy *= AIR_RESISTANCE
@@ -95,46 +107,78 @@ class Ball:
             self.dy *= -1
 
     def draw(self):
+        """
+        Draws the ball on the screen.
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        None
+        """
         pygame.draw.circle(screen, self.color, (self.x, self.y), BALL_RADIUS)
     
     def collide(self, other: "Ball"):
+        """
+        Checks for a collision with another ball and updates velocities accordingly.
+
+        Parameters
+        ----------
+        other : Ball
+            the other ball to check for a collision with
+
+        Returns
+        -------
+        None
+        """
         dx = self.x - other.x
         dy = self.y - other.y
         distance = math.hypot(dx, dy)
         if distance < 2 * BALL_RADIUS:
-            self.dx *= -1
-            self.dy *= -1
-            other.dx *= -1
-            other.dy *= -1
-
+            # Swap velocities for a basic collision response
+            self.dx, other.dx = other.dx, self.dx
+            self.dy, other.dy = other.dy, self.dy
 
 def main():
-    balls: list[Ball] = [Ball(
+    balls = [Ball(
         x=random.randint(BALL_RADIUS, SCREEN_WIDTH - BALL_RADIUS),
         y=random.randint(BALL_RADIUS, SCREEN_HEIGHT - BALL_RADIUS),
         color=(random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)),
         dx=random.uniform(-5, 5),
         dy=random.uniform(-5, 5),
     ) for _ in range(NUM_BALLS)]
-    running: bool = True
+    
+    running = True
 
-    while running:
-        screen.fill((0, 0, 0))
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        while running:
+            screen.fill((0, 0, 0))
 
-        for ball in balls:
-            ball.update()
-            ball.draw()
-            for other in balls:
-                if ball != other:
-                    ball.collide(other)
+            # Update all balls concurrently
+            futures = [executor.submit(ball.update) for ball in balls]
+            concurrent.futures.wait(futures)
 
-        pygame.display.flip()
-        clock.tick(FPS)
+            # Check for collisions concurrently
+            collision_futures = []
+            for i, ball in enumerate(balls):
+                for j in range(i + 1, len(balls)):
+                    collision_futures.append(executor.submit(ball.collide, balls[j]))
+            concurrent.futures.wait(collision_futures)
 
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                running = False
+            # Draw all balls in the main thread
+            for ball in balls:
+                ball.draw()
 
+            pygame.display.flip()
+            clock.tick(FPS)
+
+            # Handle events
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    running = False
+    
     pygame.quit()
 
 if __name__ == "__main__":
