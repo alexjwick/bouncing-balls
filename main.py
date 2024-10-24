@@ -19,7 +19,7 @@ clock = pygame.time.Clock()
 
 class Ball:
     """
-    A class to represent a ball in the Bouncing Balls game.
+    A class to represent a ball.
 
     Attributes
     ----------
@@ -142,7 +142,132 @@ class Ball:
             self.dx, other.dx = other.dx, self.dx
             self.dy, other.dy = other.dy, self.dy
 
+class City:
+    """
+    A class to represent a city.
+
+    Attributes
+    ----------
+    name : str
+        the name of the city
+    latitude : float
+        the latitude of the city
+    longitude : float
+        the longitude of the city
+    """
+
+    def __init__(self, name: str, latitude: float, longitude: float):
+        """
+        Constructs all the necessary attributes for the City object.
+
+        Parameters
+        ----------
+        name : str
+            the name of the city
+        latitude : float
+            the latitude of the city
+        longitude : float
+            the longitude of the city
+        
+        Returns
+        -------
+        None
+        """
+        self.name: str = name
+        self.latitude: float = latitude
+        self.longitude: float = longitude
+    
+    def get_current_weather(self) -> tuple[int, int]:
+        """
+        Gets the current temperature and wind speed for the city.
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        tuple[int, int]
+            a tuple containing the current temperature and wind speed
+        """
+        return get_weather_data(self.latitude, self.longitude)
+
+class CityBall(Ball):
+    """
+    A class to represent a ball that is associated with a city.
+
+    Attributes
+    ----------
+    city : City
+        the city associated with the ball
+    """
+
+    def __init__(self, city: "City"):
+        """
+        Constructs all the necessary attributes for the CityBall object.
+
+        Parameters
+        ----------
+        city : City
+            the city associated with the ball
+        
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        ValueError
+            if the weather data for the city cannot be retrieved
+        """
+        self.city = city
+        temperature, wind_speed = city.get_current_weather()
+        if temperature is None or wind_speed is None:
+            raise ValueError(f"Failed to get weather data for {city.name}")
+        # X and Y coordinates are calculated based on the city's latitude and longitude within the continental US
+        x, y = get_position_on_screen(city.latitude, city.longitude)
+        color = fahrenheit_to_rgb(temperature)
+        initial_speed = wind_speed / 3
+        initial_angle = random.uniform(0, 360)
+        super().__init__(x, y, color, initial_speed, initial_angle)
+
+def get_position_on_screen(latitude: float, longitude: float) -> tuple[int, int]:
+    """
+    Converts a latitude and longitude to an (x, y) position on the screen.
+
+    Parameters
+    ----------
+    latitude : float
+        the latitude of the location
+    longitude : float
+        the longitude of the location
+
+    Returns
+    -------
+    tuple[int, int]
+        a tuple containing the x and y coordinates on the screen
+    """
+    # X and Y coordinates are calculated based on the city's latitude and longitude within the continental US
+    x = int((longitude + 125) / 50 * SCREEN_WIDTH)
+    y = int((50 - latitude) / 25 * SCREEN_HEIGHT)
+    return x, y
+
 def get_weather_data(latitude: float, longitude: float) -> tuple[int, int]:
+    """
+    Gets the current temperature and wind speed for a given latitude and longitude.
+
+    Parameters
+    ----------
+    latitude : float
+        the latitude of the location
+    longitude : float
+        the longitude of the location
+    
+    Returns
+    -------
+    tuple[int, int]
+        a tuple containing the current temperature and wind speed
+    """
     api_url = f"https://api.weather.gov/points/{latitude},{longitude}"
 
     response = requests.get(api_url)
@@ -169,6 +294,16 @@ def fahrenheit_to_rgb(fahrenheit: int) -> tuple[int, int, int]:
     """
     Converts a temperature in Fahrenheit to an RGB value using a rainbow palette.
     The temperature range is mapped from 0°F (blue) to 100°F (red).
+
+    Parameters
+    ----------
+    fahrenheit : int
+        the temperature in Fahrenheit
+
+    Returns
+    -------
+    tuple[int, int, int]
+        a tuple containing the red, green, and blue values for the color
     """
     min_temp = 0
     max_temp = 100
@@ -208,36 +343,59 @@ def fahrenheit_to_rgb(fahrenheit: int) -> tuple[int, int, int]:
 
     return (red_value, green_value, blue_value)
 
-def generate_balls(temperature: int, wind_speed: int) -> list[Ball]:
+def generate_balls(cities: list["City"]) -> list["Ball"]:
     """
     Generates a list of Ball objects such that each ball is randomly placed on the screen without overlapping.
     The color of the balls is dependent on the temperature, and the initial speed is dependent on the wind speed.
+
+    Parameters
+    ----------
+    cities : list[City]
+        a list of cities to generate balls for
+    
+    Returns
+    -------
+    list[Ball]
+        a list of Ball objects
     """
     balls = []
-    for _ in range(NUM_BALLS):
-        x = random.randint(BALL_RADIUS, SCREEN_WIDTH - BALL_RADIUS)
-        y = random.randint(BALL_RADIUS, SCREEN_HEIGHT - BALL_RADIUS)
-        # Color is based on temperature, with gradient from blue to green to red
-        color = fahrenheit_to_rgb(temperature)
-        initial_speed = wind_speed / 3
-        initial_angle = random.uniform(0, 360)
-        ball = Ball(x, y, color, initial_speed, initial_angle)
-        for other_ball in balls:
-            while ball.is_colliding(other_ball):
-                ball.x = random.randint(BALL_RADIUS, SCREEN_WIDTH - BALL_RADIUS)
-                ball.y = random.randint(BALL_RADIUS, SCREEN_HEIGHT - BALL_RADIUS)
-        balls.append(ball)
+    for city in cities:
+        try:
+            ball = CityBall(city)
+            print(f"Created ball for {city.name}")
+            balls.append(ball)
+        except ValueError as e:
+            print(e)
     return balls
 
+def load_cities_from_file(file_path: str, has_headers: bool = False) -> list["City"]:
+    """
+    Loads cities from a CSV file containing city names, latitudes, and longitudes.
+
+    Parameters
+    ----------
+    file_path : str
+        the path to the CSV file containing city data
+    
+    Returns
+    -------
+    list[City]
+        a list of City objects
+    """
+    cities = []
+    with open(file_path, "r") as file:
+        if has_headers:
+            next(file)
+        for line in file:
+            name, latitude, longitude = line.strip().split(",")
+            city = City(name, float(latitude), float(longitude))
+            cities.append(city)
+    return cities
+
 def main():
-    latitude = input("Enter latitude: ")
-    longitude = input("Enter longitude: ")
-    temperature, wind_speed = get_weather_data(latitude, longitude)
-    if temperature is None or wind_speed is None:
-        print("Failed to get weather data for {latitude}, {longitude}. Exiting...")
-        return
-    print(f"Generating balls with temperature {temperature}°F and wind speed {wind_speed} mph for {latitude}, {longitude}")
-    balls = generate_balls(temperature=temperature, wind_speed=wind_speed)
+    # Load cities from a file
+    cities = load_cities_from_file("data/cities_us.csv", has_headers=True)
+    balls = generate_balls(cities)
     
     running = True
 
