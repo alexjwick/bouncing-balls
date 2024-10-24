@@ -359,13 +359,15 @@ def generate_balls(cities: list["City"]) -> list["Ball"]:
         a list of Ball objects
     """
     balls = []
-    for city in cities:
-        try:
-            ball = CityBall(city)
-            print(f"Created ball for {city.name}")
-            balls.append(ball)
-        except ValueError as e:
-            print(e)
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        futures = [executor.submit(CityBall, city) for city in cities]
+        for future in concurrent.futures.as_completed(futures):
+            try:
+                ball = future.result()
+                print(f"Created ball for {ball.city.name}")
+                balls.append(ball)
+            except ValueError as e:
+                print(e)
     return balls
 
 def load_cities_from_file(file_path: str, has_headers: bool = False) -> list["City"]:
