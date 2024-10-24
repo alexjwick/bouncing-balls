@@ -142,7 +142,7 @@ class Ball:
             self.dx, other.dx = other.dx, self.dx
             self.dy, other.dy = other.dy, self.dy
 
-def get_weather_data(latitude, longitude):
+def get_weather_data(latitude: float, longitude: float) -> tuple[int, int]:
     api_url = f"https://api.weather.gov/points/{latitude},{longitude}"
 
     response = requests.get(api_url)
@@ -159,22 +159,67 @@ def get_weather_data(latitude, longitude):
             temperature = current_forecast['temperature']
             wind_speed = current_forecast['windSpeed']
             
-            return temperature, wind_speed
+            return int(temperature), int(wind_speed.split()[0])
         else:
             return None, None
     else:
         return None, None
     
-def generate_balls() -> list[Ball]:
+def fahrenheit_to_rgb(fahrenheit: int) -> tuple[int, int, int]:
+    """
+    Converts a temperature in Fahrenheit to an RGB value using a rainbow palette.
+    The temperature range is mapped from 0°F (blue) to 100°F (red).
+    """
+    min_temp = 0
+    max_temp = 100
+    
+    if fahrenheit < min_temp:
+        fahrenheit = min_temp
+    elif fahrenheit > max_temp:
+        fahrenheit = max_temp
+
+    normalized_temp = (fahrenheit - min_temp) / (max_temp - min_temp)
+
+    if normalized_temp <= 0.2:
+        # Blue to Cyan transition
+        blue_value = 255
+        green_value = int(normalized_temp * 5 * 255)
+        red_value = 0
+    elif normalized_temp <= 0.4:
+        # Cyan to Green transition
+        blue_value = int((0.4 - normalized_temp) * 5 * 255)
+        green_value = 255
+        red_value = 0
+    elif normalized_temp <= 0.6:
+        # Green to Yellow transition
+        blue_value = 0
+        green_value = 255
+        red_value = int((normalized_temp - 0.4) * 5 * 255)
+    elif normalized_temp <= 0.8:
+        # Yellow to Orange transition
+        blue_value = 0
+        green_value = int((0.8 - normalized_temp) * 5 * 255)
+        red_value = 255
+    else:
+        # Orange to Red transition
+        blue_value = 0
+        green_value = 0
+        red_value = 255
+
+    return (red_value, green_value, blue_value)
+
+def generate_balls(temperature: int, wind_speed: int) -> list[Ball]:
     """
     Generates a list of Ball objects such that each ball is randomly placed on the screen without overlapping.
+    The color of the balls is dependent on the temperature, and the initial speed is dependent on the wind speed.
     """
     balls = []
     for _ in range(NUM_BALLS):
         x = random.randint(BALL_RADIUS, SCREEN_WIDTH - BALL_RADIUS)
         y = random.randint(BALL_RADIUS, SCREEN_HEIGHT - BALL_RADIUS)
-        color = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
-        initial_speed = 5
+        # Color is based on temperature, with gradient from blue to green to red
+        color = fahrenheit_to_rgb(temperature)
+        initial_speed = wind_speed / 3
         initial_angle = random.uniform(0, 360)
         ball = Ball(x, y, color, initial_speed, initial_angle)
         for other_ball in balls:
@@ -185,12 +230,14 @@ def generate_balls() -> list[Ball]:
     return balls
 
 def main():
-    latitude = 37.7749
-    longitude = -122.4194
+    latitude = input("Enter latitude: ")
+    longitude = input("Enter longitude: ")
     temperature, wind_speed = get_weather_data(latitude, longitude)
-    print(f"Temperature: {temperature}°F")
-    print(f"Wind Speed: {wind_speed}")
-    balls = generate_balls()
+    if temperature is None or wind_speed is None:
+        print("Failed to get weather data for {latitude}, {longitude}. Exiting...")
+        return
+    print(f"Generating balls with temperature {temperature}°F and wind speed {wind_speed} mph for {latitude}, {longitude}")
+    balls = generate_balls(temperature=temperature, wind_speed=wind_speed)
     
     running = True
 
