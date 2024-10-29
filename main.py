@@ -443,6 +443,8 @@ def main():
     print("Generating balls...")
     balls = generate_balls(cities)
     print(f"Generated {len(balls)} balls")
+    print("Starting simulation...")
+    print("Press 'Esc' to exit or 'U' to update weather data")
     
     running = True
 
