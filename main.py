@@ -3,6 +3,7 @@ import pygame
 import random
 import concurrent.futures
 import requests
+import argparse
 
 # Constants
 SCREEN_WIDTH = 800
@@ -176,6 +177,9 @@ class City:
         self.name: str = name
         self.latitude: float = latitude
         self.longitude: float = longitude
+        self.temperature: int = 0
+        self.wind_speed: int = 0
+        self.update_weather()
     
     def get_current_weather(self) -> tuple[int, int]:
         """
@@ -191,6 +195,20 @@ class City:
             a tuple containing the current temperature and wind speed
         """
         return get_weather_data(self.latitude, self.longitude)
+    
+    def update_weather(self):
+        """
+        Updates the weather data for the city.
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        None
+        """
+        self.temperature, self.wind_speed = self.get_current_weather()
 
 class CityBall(Ball):
     """
@@ -221,7 +239,7 @@ class CityBall(Ball):
             if the weather data for the city cannot be retrieved
         """
         self.city = city
-        temperature, wind_speed = city.get_current_weather()
+        temperature, wind_speed = city.temperature, city.wind_speed
         if temperature is None or wind_speed is None:
             raise ValueError(f"Failed to get weather data for {city.name}")
         # X and Y coordinates are calculated based on the city's latitude and longitude within the continental US
@@ -230,6 +248,21 @@ class CityBall(Ball):
         initial_speed = wind_speed / 3
         initial_angle = random.uniform(0, 360)
         super().__init__(x, y, color, initial_speed, initial_angle)
+
+    def update_weather(self):
+        """
+        Updates the weather data for the city associated with the ball.
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        None
+        """
+        self.city.update_weather()
+        self.color = fahrenheit_to_rgb(self.city.temperature)
 
 def get_position_on_screen(latitude: float, longitude: float) -> tuple[int, int]:
     """
@@ -248,8 +281,12 @@ def get_position_on_screen(latitude: float, longitude: float) -> tuple[int, int]
         a tuple containing the x and y coordinates on the screen
     """
     # X and Y coordinates are calculated based on the city's latitude and longitude within the continental US
-    x = int((longitude + 125) / 50 * SCREEN_WIDTH)
-    y = int((50 - latitude) / 25 * SCREEN_HEIGHT)
+    min_latitude = 25
+    max_latitude = 50
+    min_longitude = -125
+    max_longitude = -65
+    x = int((longitude - min_longitude) / (max_longitude - min_longitude) * SCREEN_WIDTH)
+    y = int((1 - (latitude - min_latitude) / (max_latitude - min_latitude)) * SCREEN_HEIGHT)
     return x, y
 
 def get_weather_data(latitude: float, longitude: float) -> tuple[int, int]:
@@ -364,7 +401,7 @@ def generate_balls(cities: list["City"]) -> list["Ball"]:
         for future in concurrent.futures.as_completed(futures):
             try:
                 ball = future.result()
-                print(f"Created ball for {ball.city.name}")
+                print(f"Created ball for {ball.city.name} ({ball.city.temperature}°F, {ball.city.wind_speed} mph)")
                 balls.append(ball)
             except ValueError as e:
                 print(e)
@@ -395,9 +432,17 @@ def load_cities_from_file(file_path: str, has_headers: bool = False) -> list["Ci
     return cities
 
 def main():
+    parser = argparse.ArgumentParser(description="Simulate bouncing balls on a screen with weather data from cities")
+    parser.add_argument("file_path", type=str, help="the path to the CSV file containing city data")
+    args = parser.parse_args()
+
     # Load cities from a file
-    cities = load_cities_from_file("data/cities_us.csv", has_headers=True)
+    print(f"Loading cities from {args.file_path}...")
+    cities = load_cities_from_file(args.file_path, has_headers=True)
+    print(f"Loaded {len(cities)} cities")
+    print("Generating balls...")
     balls = generate_balls(cities)
+    print(f"Generated {len(balls)} balls")
     
     running = True
 
@@ -427,6 +472,13 @@ def main():
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     running = False
+                elif event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_ESCAPE:
+                        running = False
+                    elif event.key == pygame.K_u:
+                        weather_futures = [executor.submit(ball.update_weather) for ball in balls]
+                        concurrent.futures.wait(weather_futures)
+                        print("Updated weather data for all cities")
     
     pygame.quit()
 
