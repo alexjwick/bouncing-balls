@@ -437,12 +437,13 @@ def main():
     args = parser.parse_args()
 
     # Load cities from a file
-    print(f"Loading cities from {args.file_path}...")
+    print(f"Reading cities from {args.file_path}...")
     cities = load_cities_from_file(args.file_path, has_headers=True)
     print(f"Loaded {len(cities)} cities")
     print("Generating balls...")
     balls = generate_balls(cities)
     print(f"Generated {len(balls)} balls")
+    print("Each ball represents a city. The color of the ball is based on the temperature, and the initial speed is based on the wind speed.")
     print("Starting simulation...")
     print("Press 'Esc' to exit or 'U' to update weather data")
     
