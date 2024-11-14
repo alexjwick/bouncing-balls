@@ -4,7 +4,16 @@
 
 ```bash
 source venv/bin/activate
-python main.py
+python main.py <file_path>
+```
+
+where `<file_path>` is the path to a csv file of cities with the following format:
+
+```
+name,lat,long
+city1,latitude1,longitude1
+city2,latitude2,longitude2
+...
 ```
 
 ## "Adding new features" assignment
