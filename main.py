@@ -1,3 +1,13 @@
+"""
+File: main.py
+Author: Alexander Wick
+Created: 2024-09-25
+Copyright: GNU General Public License v3.0
+
+Main entry point for the Bouncing Balls Weather Visualization application.
+Handles pygame initialization, game loop, and command line arguments.
+"""
+
 import argparse
 import pygame
 import concurrent.futures

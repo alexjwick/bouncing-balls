@@ -1,3 +1,12 @@
+"""
+File: weather.py
+Author: Alexander Wick
+Created: 2024-11-14
+Copyright: GNU General Public License v3.0
+
+Utility functions for retrieving weather data from the National Weather Service API.
+"""
+
 import requests
 
 def get_weather_data(latitude: float, longitude: float) -> tuple[int, int]:

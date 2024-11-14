@@ -1,3 +1,12 @@
+"""
+File: ball.py
+Author: Alexander Wick
+Created: 2024-11-14
+Copyright: GNU General Public License v3.0
+
+A class to represent a ball.
+"""
+
 import math
 import pygame
 from config import SCREEN_WIDTH, SCREEN_HEIGHT, BALL_RADIUS

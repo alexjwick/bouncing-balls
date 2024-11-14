@@ -1,3 +1,12 @@
+"""
+File: color.py
+Author: Alexander Wick
+Created: 2024-11-14
+Copyright: GNU General Public License v3.0
+
+Utility functions for color manipulation.
+"""
+
 def fahrenheit_to_rgb(fahrenheit: int) -> tuple[int, int, int]:
     """
     Converts a temperature in Fahrenheit to an RGB value using a rainbow palette.

@@ -1,3 +1,12 @@
+"""
+File: position.py
+Author: Alexander Wick
+Created: 2024-11-14
+Copyright: GNU General Public License v3.0
+
+Utility functions for converting latitude and longitude to screen positions.
+"""
+
 from config import SCREEN_HEIGHT, SCREEN_WIDTH
 
 def get_position_on_screen(latitude: float, longitude: float) -> tuple[int, int]:

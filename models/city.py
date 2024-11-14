@@ -1,3 +1,12 @@
+"""
+File: city.py
+Author: Alexander Wick
+Created: 2024-11-14
+Copyright: GNU General Public License v3.0
+
+A class to represent a city.
+"""
+
 from utils.weather import get_weather_data
 
 class City:

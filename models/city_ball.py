@@ -1,3 +1,12 @@
+"""
+File: city_ball.py
+Author: Alexander Wick
+Created: 2024-11-14
+Copyright: GNU General Public License v3.0
+
+A class to represent a ball that is associated with a city.
+"""
+
 import random
 from models.ball import Ball
 from models.city import City
